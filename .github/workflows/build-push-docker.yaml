@@ -1,0 +1,59 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    # branches:  
+    #   - main  # Change this to your default branch 
+    tags:
+      - v*  # Trigger on version tags like v1.0.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up QEMU for multi-platform builds
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2  # Use the latest version
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3  # Ensure you're using the latest version
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Build and push Next.js Docker image
+      uses: docker/build-push-action@v3  # Ensure you're using the latest version
+      with:
+        context: ./client  # Assuming your Next.js app is in the 'client' directory
+        push: true  # Push the built image to Docker Hub
+        tags: |
+          sa2avroo/nextjs-standalone-new:latest
+          sa2avroo/nextjs-standalone-new:${{ github.sha }}
+          sa2avroo/nextjs-standalone-new:${{ github.ref_name }}
+
+    - name: Build and push Node.js server Docker image
+      uses: docker/build-push-action@v3  # Ensure you're using the latest version
+      with:
+        context: ./server  # Assuming your Node.js server is in the 'server' directory
+        push: true  # Push the built image to Docker Hub
+        tags: |
+          sa2avroo/nodejs-server:latest
+          sa2avroo/nodejs-server:${{ github.sha }}
+          sa2avroo/nodejs-server:${{ github.ref_name }}
+
+    - name: Logout from Docker Hub
+      run: docker logout  # Optional: Logout after the build and push process

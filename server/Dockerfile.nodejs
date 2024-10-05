@@ -1,0 +1,54 @@
+# Use a specific version of Node.js for consistency
+FROM node:18-alpine AS base
+
+# Stage for dependencies
+FROM base AS deps
+WORKDIR /app
+
+# Copy only package files to leverage Docker cache
+COPY package.json package-lock.json ./
+RUN npm install --frozen-lockfile
+
+# Stage for building the application
+FROM base AS builder
+WORKDIR /app
+
+# Copy the full application code
+COPY . .
+
+# Copy node_modules from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Build the application if applicable (adjust if using TypeScript or other build tools)
+RUN npm run build
+
+# Final stage for running the application
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy only production dependencies
+COPY --from=deps /app/package.json ./
+COPY --from=deps /app/package-lock.json ./
+RUN npm install --production --frozen-lockfile
+
+# Create a user and group for better security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 shakil
+
+# Copy built files from the builder stage
+COPY --from=builder --chown=shakil:nodejs /app/dist ./dist
+
+USER shakil
+
+# Expose the port for the application
+EXPOSE 5500
+
+ENV PORT=5500
+
+# Health check to ensure the application is running
+HEALTHCHECK CMD curl --fail http://localhost:5500/health || exit 1
+
+# Command to run your application
+CMD ["node", "server.js"]
