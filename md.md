@@ -146,3 +146,60 @@ CMD ["npm", "start"]
 - Ensure that the `LIB_PATH` in the Dockerfiles matches the directory structure where your libraries are built.
 - You may need to adapt the `COPY` commands in the Dockerfiles depending on where the libraries are located after the build step.
 - Make sure to test locally to confirm the library paths are set up correctly before pushing to your CI/CD pipeline.
+- 
+
+
+---
+
+
+It looks like you've set up a GitHub Actions workflow to build and push Docker images. However, you mentioned that the action is not running and asked how to push a new release version. Here are some tips to help you troubleshoot and ensure that your action runs correctly when pushing a new release version:
+
+### Key Points to Check:
+
+1. **Triggering the Action**:
+   - Your workflow is set to trigger on version tags (e.g., `v1.0.0`). Make sure you create a **tag** that follows your specified structure. For example:
+     ```bash
+     git tag v1.0.1
+     git push origin v1.0.1
+     ```
+   - Ensure that there are no spaces or invalid characters in your tag name.
+
+2. **Workflow Location**:
+   - Make sure that your workflow YAML file is located in the correct directory, typically `.github/workflows/` in your repository.
+
+3. **Branch Protection Rules**:
+   - Check if there are any branch protection rules on the default branch that might prevent the GitHub Actions workflows from triggering.
+
+4. **Permissions and Secrets**:
+   - Ensure that the `DOCKER_USERNAME` and `DOCKER_TOKEN` secrets are correctly set in your repository settings. If the secrets are not set, the login step will fail, and the image will not be pushed.
+
+5. **Check Your Actions Logs**:
+   - After trying to push a new tag, go to the "Actions" tab in your GitHub repository to see if the action was triggered. If it was, you can check the logs for errors.
+
+6. **Logs for Debugging**:
+   - You may want to add a step to print out the current GitHub context to verify variables like `${{ github.sha }}` and `${{ github.ref_name }}` if you're facing issues.
+   ```yaml
+   - name: Print GitHub context
+     run: echo "SHA: ${{ github.sha }}, Ref Name: ${{ github.ref_name }}"
+   ```
+
+7. **Using 'Latest' Tag**:
+   - If you want to always push a new version with the `latest` tag, ensure that there’s a strategy in place to handle that, as pushing a `latest` tag every time might not be ideal if you're also tagging with version numbers.
+
+### Example Steps to Create a New Release:
+
+Assuming your current branch is `main`, here are the steps you can follow:
+
+1. Create a new tag:
+   ```bash
+   git checkout main  # Make sure you're on the main branch
+   git pull origin main  # Update your branch with the latest changes
+   git tag v1.0.1  # Replace with your new version
+   git push origin v1.0.1  # Push the tag to GitHub
+   ```
+
+2. After pushing the tag, navigate to the "Actions" tab in your repository to observe the build and push actions being executed.
+
+### Final Note:
+If you continue to face issues, you could consider enabling "Actions" for your repository if they are not already enabled, and review any logs or step outputs for helpful debugging information.
+
